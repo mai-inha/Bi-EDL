@@ -23,8 +23,8 @@ from pytorch_lightning.callbacks import (
 from datetime import datetime
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
-from finetuning_lightening import MCQEDLLightModel
-from finetuning_dm import NIHDataModule
+from finetune.finetuning_lightening import MCQEDLLightModel
+from finetune.finetuning_dm import NIHDataModule
 
 def main(cfg) :
     class_name = ['Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass', 'Nodule', 'Pneumonia', 'Pneumothorax',
