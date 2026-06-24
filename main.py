@@ -122,7 +122,7 @@ def main(cfg) :
     trainer.test(model, datamodule=dm)
 
 if __name__ == "__main__" :
-    cfg = OmegaConf.load('configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_MCQ_Only_EDL.yaml')
+    cfg = OmegaConf.load('configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_EDL.yaml')
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
     torch.manual_seed(cfg.train.seed)
