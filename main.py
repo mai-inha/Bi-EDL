@@ -1,12 +1,7 @@
 import os
 import sys
-sys.path.append("/shared/home/mai/Taehun/Uncertainty/MICCAI_2025/CARZero")
-sys.path.append("/shared/home/mai/Taehun/Uncertainty/MICCAI_2025/CARZero/finetuning")
-os.chdir("/shared/home/mai/Taehun/Uncertainty/MICCAI_2025/CARZero")
 import torch
-import CARZero
 import pandas as pd 
-import json
 import numpy as np
 from utils import *
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -25,12 +20,11 @@ from pytorch_lightning.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
 )
-import CARZero.builder as builder
 from datetime import datetime
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
-from finetuning_lightening import MCQEDLDQNWOSAMLPGLModel
-from finetuning_dm import NIHMCQOnlyDataModule
+from finetuning_lightening import MCQEDLLightModel
+from finetuning_dm import NIHDataModule
 
 def main(cfg) :
     class_name = ['Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass', 'Nodule', 'Pneumonia', 'Pneumothorax',
@@ -53,13 +47,11 @@ def main(cfg) :
     label_file_path = os.path.join('ChestXray-14', 'test_list.txt')
     df_test = pd.read_csv(label_file_path, sep=' ', names=csv_head)
     key = csv_head[1:]
-    label = df_test[key].values
     # add 'No Finding' column: 1 if all other label columns are 0, else 0
     df_test['No Finding'] = (df_test[key].sum(axis=1) == 0).astype(int)
 
     # update key and label to include the new column
     key = key + ['No Finding']
-    label = df_test[key].values
     df_test['Image Index'] = df_test['path'].apply(lambda x: os.path.basename(x))
     if 'Image Index' in df_test.columns:
         df_test.insert(0, 'Image Index', df_test.pop('Image Index'))
@@ -72,8 +64,8 @@ def main(cfg) :
     df_train = df_train.drop(columns=['Finding Labels'], errors='ignore')
     
     train_df, val_df = train_test_split(df_train, test_size=0.1, random_state=42)
-
-    dm = NIHMCQOnlyDataModule(
+ 
+    dm = NIHDataModule(
         cfg,
         root=data_path,
         train_df=train_df,
@@ -81,7 +73,7 @@ def main(cfg) :
         test_df=df_test,
     )
 
-    model = MCQEDLDQNWOSAMLPGLModel(cfg)
+    model = MCQEDLLightModel(cfg)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_path = os.path.join("logs", cfg.project, cfg.name, timestamp)
@@ -106,12 +98,11 @@ def main(cfg) :
         
         callbacks=[
             ModelCheckpoint(
-                monitor="val/mean_auroc",
-                dirpath=os.path.join(log_path, "checkpoints"),
-                filename="best_model",
-                save_top_k=1,
-                mode="max",
-            ),
+            monitor="val/mean_auroc",
+            dirpath=os.path.join(log_path, "checkpoints", "best"),
+            filename="best_model",
+            save_top_k=1,
+            mode="max",),
             EarlyStopping(monitor="val/mean_auroc", patience=10, mode="max"),
             LearningRateMonitor(logging_interval="step"),
         ],
