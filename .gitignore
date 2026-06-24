@@ -11,4 +11,5 @@
 *.npy
 *.log
 *.DS_Store
+logs/
 __pycache__

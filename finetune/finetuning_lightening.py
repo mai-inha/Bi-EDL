@@ -39,12 +39,12 @@ def dirichlet_kl_to_uniform(alpha: torch.Tensor) -> torch.Tensor:
 
 
 class MCQEDLLightModel(LightningModule):
-    def __init__(self, cfg, CARZero_model=None):
+    def __init__(self, cfg, backbone_model=None):
         super().__init__()
 
         self.cfg = cfg
         self.save_hyperparameters(self.cfg)
-        self.CARZero_model = CARZero_model
+        self.backbone_model = backbone_model
         self.lr = cfg.lightning.trainer.lr
         self.dm = None
         self.auroc_metric = MultilabelAUROC(num_labels=14, average=None)
@@ -73,8 +73,8 @@ class MCQEDLLightModel(LightningModule):
         )
 
     def setup(self, stage=None):
-        if self.CARZero_model is None:
-            self.CARZero_model = CARZero.load_CARZero(name="CARZero_vit_b_16", device=None, multi=self.cfg.model.CARZero.multi, cfg=self.cfg)
+        if self.backbone_model is None:
+            self.backbone_model = CARZero.load_CARZero(name="CARZero_vit_b_16", device=None, multi=self.cfg.model.CARZero.multi, cfg=self.cfg)
             self.freeze_module()
             self.print("CARZero model loaded and frozen.")
         if self.cfg.peft.enabled :
@@ -94,33 +94,33 @@ class MCQEDLLightModel(LightningModule):
     def freeze_module(self):
         freeze_dict = getattr(self.cfg, "freeze", {})
         if freeze_dict.get("image", False):
-            for param in self.CARZero_model.img_encoder.parameters():
+            for param in self.backbone_model.img_encoder.parameters():
                 param.requires_grad = False
         if freeze_dict.get("text", False):
-            for param in self.CARZero_model.text_encoder.parameters():
+            for param in self.backbone_model.text_encoder.parameters():
                 param.requires_grad = False
         if freeze_dict.get("fusion", False):
             if self.cfg.model.CARZero.multi == False:
-                for param in self.CARZero_model.fusion_module.parameters():
+                for param in self.backbone_model.fusion_module.parameters():
                     param.requires_grad = False
             else :
-                for param in self.CARZero_model.i2t_fusion_module.parameters():
+                for param in self.backbone_model.i2t_fusion_module.parameters():
                     param.requires_grad = False
-                for param in self.CARZero_model.t2i_fusion_module.parameters():
+                for param in self.backbone_model.t2i_fusion_module.parameters():
                     param.requires_grad = False
 
         self.print("==== Frozen Modules ====")
-        self.print(" -> image encoder frozen:", all(not p.requires_grad for p in self.CARZero_model.img_encoder.parameters()))
-        self.print(" -> text encoder frozen:", all(not p.requires_grad for p in self.CARZero_model.text_encoder.parameters()))
+        self.print(" -> image encoder frozen:", all(not p.requires_grad for p in self.backbone_model.img_encoder.parameters()))
+        self.print(" -> text encoder frozen:", all(not p.requires_grad for p in self.backbone_model.text_encoder.parameters()))
 
         if self.cfg.model.CARZero.multi == False:
-            self.print(" -> fusion module frozen:", all(not p.requires_grad for p in self.CARZero_model.fusion_module.parameters()))
+            self.print(" -> fusion module frozen:", all(not p.requires_grad for p in self.backbone_model.fusion_module.parameters()))
         else :
-            self.print(" -> i2t fusion module frozen:", all(not p.requires_grad for p in self.CARZero_model.i2t_fusion_module.parameters()))
-            self.print(" -> t2i fusion module frozen:", all(not p.requires_grad for p in self.CARZero_model.t2i_fusion_module.parameters()))
+            self.print(" -> i2t fusion module frozen:", all(not p.requires_grad for p in self.backbone_model.i2t_fusion_module.parameters()))
+            self.print(" -> t2i fusion module frozen:", all(not p.requires_grad for p in self.backbone_model.t2i_fusion_module.parameters()))
 
     def configure_optimizers(self):
-        optimizer = builder.build_optimizer(self.cfg, self.lr, self.CARZero_model)
+        optimizer = builder.build_optimizer(self.cfg, self.lr, self.backbone_model)
         scheduler = builder.build_scheduler(self.cfg, optimizer, self.dm)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
@@ -244,11 +244,11 @@ class MCQEDLLightModel(LightningModule):
 
     def image_forward(self, batch) :
         imgs = batch["imgs"].to(self.device)
-        img_emb_l, img_emb_g = self.CARZero_model.image_encoder_forward(imgs)
+        img_emb_l, img_emb_g = self.backbone_model.image_encoder_forward(imgs)
         return img_emb_l, img_emb_g
 
     def text_forward(self) :
-        text_emb_l, text_emb_g, sents = self.CARZero_model.text_encoder_forward(self.toks['input_ids'].to(self.device),
+        text_emb_l, text_emb_g, sents = self.backbone_model.text_encoder_forward(self.toks['input_ids'].to(self.device),
                                                                                 self.toks['attention_mask'].to(self.device),
                                                                                 self.toks['token_type_ids'].to(self.device),
                                                                                 )
@@ -285,12 +285,12 @@ class MCQEDLLightModel(LightningModule):
 
         # 4. Fusion Module을 통한 유사도 계산
         # I2T: 이미지를 쿼리로 텍스트의 로컬 토큰들을 참조
-        i2t_logit = self.CARZero_model.i2t_fusion_module(
+        i2t_logit = self.backbone_model.i2t_fusion_module(
             txt_l_exp, img_g_q, inside_repeat=False
         ).squeeze(-1).squeeze(-1) # (B*T)
 
         # T2I: 텍스트를 쿼리로 이미지의 로컬 패치들을 참조
-        t2i_logit = self.CARZero_model.t2i_fusion_module(
+        t2i_logit = self.backbone_model.t2i_fusion_module(
             img_l_exp, txt_g_q, inside_repeat=False
         ).squeeze(-1).squeeze(-1) # (B*T)
 
@@ -311,6 +311,10 @@ class MCQEDLLightModel(LightningModule):
 
     def t2i_forward(self, t2i_cls, labels):
         t2i_prompt_indices, t2i_image_choices, t2i_targets = self.generate_t2i_mcq(labels.to(self.device))
+
+        if t2i_prompt_indices is None:
+            zero = torch.tensor(0.0, device=self.device, requires_grad=True)
+            return zero, torch.tensor(0.0, device=self.device)
 
         t2i_logits = t2i_cls.T[t2i_prompt_indices].gather(1, t2i_image_choices.to(self.device)) # (T, 3)
         t2i_ce_loss = F.cross_entropy(t2i_logits, t2i_targets.to(self.device), reduction='mean')
@@ -341,8 +345,8 @@ class MCQEDLLightModel(LightningModule):
 
         # 2. 긍정 vs 부정 로짓 추출
         # i2t와 t2i 평균 점수 계산 (B, T)
-        avg_logits = (i2t_cls / torch.exp(self.CARZero_model.i2t_tau) +
-                    t2i_cls / torch.exp(self.CARZero_model.t2i_tau)) / 2
+        avg_logits = (i2t_cls / torch.exp(self.backbone_model.i2t_tau) +
+                    t2i_cls / torch.exp(self.backbone_model.t2i_tau)) / 2
 
         # 동일 질환의 긍정(0~13) 및 부정(14~27) 인덱스
         pos_prompts_idx = target_disease_idx
@@ -441,8 +445,8 @@ class MCQEDLLightModel(LightningModule):
 
             i2t_cls, t2i_cls = self.fusion_forward(img_l, img_g, txt_l, txt_g)
 
-            avg_logits = (i2t_cls / torch.exp(self.CARZero_model.i2t_tau) +
-                t2i_cls / torch.exp(self.CARZero_model.t2i_tau)) / 2
+            avg_logits = (i2t_cls / torch.exp(self.backbone_model.i2t_tau) +
+                t2i_cls / torch.exp(self.backbone_model.t2i_tau)) / 2
         return avg_logits
 
     def metrics(self, batch, split):

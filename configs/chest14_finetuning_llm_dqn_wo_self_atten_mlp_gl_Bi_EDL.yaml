@@ -1,10 +1,7 @@
-experiment_name: 'CARZero_Globa_local_MLP'  # Train CARZero with global and local feature concate, mlp layer for SimR project
-project: 'CARZero_Finetuning_MCQ_Only_EDL'
-name: 'CARZero_MCQ_EDL_lightning'
+experiment_name: 'Bi-EDL_Finetuning'
+project: 'Bi-EDL_Finetuning_CARZero'
+name: 'Bi-EDL_Finetuning_CARZero_Chest14'
 phase: 'pretrain_llm_dqn_wo_self_atten_mlp_gl'
-trial_name:
-
-pair: true
 
 freeze:
     image: false
@@ -26,7 +23,7 @@ lightning:
         gradient_clip_val: 0.25
         lr: 0.00001
         precision: '16-mixed'
-        reload_dataloaders_every_epoch: True  # reload dataloader to change batch size
+        reload_dataloaders_every_epoch: True 
         val_check_interval: 1.0
     checkpoint_callback: 
         monitor: 'val_loss'

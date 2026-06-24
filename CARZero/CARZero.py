@@ -24,7 +24,7 @@ random.seed(10)
 
 _MODELS = {
     "CARZero_resnet50": "",
-    "CARZero_vit_b_16": "/shared/home/mai/Taehun/Uncertainty/MICCAI_2025/CARZero/pretrain_model/CARZero_best_model.ckpt",
+    "CARZero_vit_b_16": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pretrain_model", "CARZero_best_model.ckpt"),
 }
 
 

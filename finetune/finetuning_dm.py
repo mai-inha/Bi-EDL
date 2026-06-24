@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 
-from finetuning_dataset import NIHDataset
+from .finetuning_dataset import NIHDataset
 import CARZero.builder as builder
 import pytorch_lightning as pl
 
