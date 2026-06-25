@@ -18,17 +18,16 @@ Recent Vision–Language Models (VLMs) demonstrate strong zero-shot chest X-ray 
 **Bi-EDL** is a fine-tuning framework that resolves both issues by jointly optimizing:
 
 - **Bi-MCQ** (Bidirectional Multiple-Choice Questioning) — forces the model to discriminate *affirmative* from *negated* disease hypotheses in both image→text and text→image directions, establishing a disease-comparable representation space.
-- **Beta-based EDL** — reinterprets the positive/negative alignment scores as evidence for a Beta distribution, regularizing overconfident similarities and yielding closed-form, disease-wise uncertainty: `U_k = 2 / (α⁺_k + α⁻_k)`.
+- **Beta-based EDL** — reinterprets the positive/negative alignment scores as evidence for a Beta distribution, regularizing overconfident similarities and yielding closed-form, disease-wise uncertainty: $U_k = 2 / (\alpha^+_k + \alpha^-_k)$.
 
 The resulting uncertainty is directly usable for **selective prediction**: low-uncertainty cases are accepted automatically; high-uncertainty cases are flagged for human review (Fig. 2 of the paper).
 
 ---
 
 ## Architecture
-
 ![Bi-EDL Framework](Figure.png)
 
-**(a)** Evidence formation under InfoNCE/CE vs. EDL loss — EDL regularizes incorrect-direction evidence toward Beta(1,1), shifting the uncertainty distribution to better separate correct from failed predictions.
+**(a)** Evidence formation under InfoNCE/CE vs. EDL loss — EDL regularizes incorrect-direction evidence toward $\text{Beta}(1,1)$, shifting the uncertainty distribution to better separate correct from failed predictions.
 **(b)** Training pipeline: bidirectional cross-attention (I2T + T2I) over query–candidate pairs produces alignment scores, jointly optimized with MCQ cross-entropy and EDL losses via a Fusion Gater.
 **(c)** Inference pipeline: fixed presence/absence prompts per disease yield per-disease uncertainty scores for selective prediction.
 
@@ -92,9 +91,7 @@ Stepwise contribution of alignment (Bi-MCQ) and evidential modeling (EDL):
 git clone <repo-url>
 cd Bi-EDL
 
-pip install torch torchvision
-pip install pytorch-lightning transformers omegaconf
-pip install scikit-learn pandas tqdm wandb
+pip install -r requirements.txt
 
 # Install CARZero backbone
 pip install -e ./CARZero
@@ -161,11 +158,11 @@ All five methods are applied post-hoc to the same (positive, negative) logit pai
 
 | Method | Score | Notes |
 |---|---|---|
-| **MSP** | `1 − max(p⁺, p⁻)` | Maximum Softmax Probability baseline |
-| **Energy** | `−log(exp(p⁺) + exp(p⁻))` | Free energy of the logit pair |
-| **MaxLogit** | `−max(p⁺, p⁻)` | Logit-level analogue of MSP |
-| **EDL** | `2 / (softplus(p⁺)+1 + softplus(p⁻)+1)` | Beta vacuity; model's native uncertainty |
-| **ODIN** | `1 − max_softmax(x + ε·sign(∇loss))` | Input perturbation (Liang et al., ICLR 2018) |
+| **MSP** | $1 - \max(p^+, p^-)$ | Maximum Softmax Probability baseline |
+| **Energy** | $-\log(\exp(p^+) + \exp(p^-))$ | Free energy of the logit pair |
+| **MaxLogit** | $-\max(p^+, p^-)$ | Logit-level analogue of MSP |
+| **EDL** | $2 \,/\, (\text{softplus}(p^+)+1 + \text{softplus}(p^-)+1)$ | Beta vacuity; model's native uncertainty |
+| **ODIN** | $1 - \max\,\sigma(x + \varepsilon \cdot \text{sign}(\nabla \mathcal{L}))$ | Input perturbation (Liang et al., ICLR 2018) |
 
 ---
 
@@ -186,9 +183,9 @@ Key parameters in `configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_ED
 
 | Parameter | Default | Description |
 |---|---|---|
-| `train.weight` | `0.5` | Fusion Gater weight `w` (i2t vs. t2i) |
-| `train.lam` | `50` | Warmup epochs for λ_e ramp |
-| `train.edl_weight` | `0.1` | λ_KL — KL regularization weight in L_EDL |
+| `train.weight` | `0.5` | Fusion Gater weight $w$ (i2t vs. t2i) |
+| `train.lam` | `50` | Warmup epochs for $\lambda_e$ ramp |
+| `train.edl_weight` | `0.1` | $\lambda_{KL}$ — KL regularization weight in $\mathcal{L}_\text{EDL}$ |
 | `train.seed` | `14` | Random seed |
 | `lightning.trainer.lr` | `1e-5` | Adam learning rate |
 | `lightning.trainer.precision` | `16-mixed` | Mixed-precision training |
@@ -216,18 +213,4 @@ Bi-EDL/
 │   └── test_list.txt              # Official NIH test split
 ├── checkpoints/                   # Model checkpoints
 └── logs/                          # Training logs
-```
-
----
-
-## Citation
-
-```bibtex
-@inproceedings{kim2026biedl,
-  title     = {When Does Uncertainty Become Meaningful in Medical Vision–Language Models?
-               Alignment Enables Disease-wise Uncertainty and Risk-Aware Prediction},
-  author    = {Tae Hun Kim and Hyun Gyu Lee},
-  booktitle = {Medical Image Computing and Computer Assisted Intervention (MICCAI)},
-  year      = {2026}
-}
 ```
