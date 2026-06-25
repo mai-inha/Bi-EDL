@@ -121,7 +121,7 @@ train:
         frequency: 1
     seed: 14
     weight: 0.5
-    lam: 50
+    lam: 15
     edl_weight: 0.1
 test : 
     batch_size: 256

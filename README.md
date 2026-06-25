@@ -24,74 +24,6 @@ The resulting uncertainty is directly usable for **selective prediction**: low-u
 
 ---
 
-## Method
-
-### 1. Bi-directional MCQ Alignment (Bi-MCQ)
-
-For each disease *d_k*, a positive prompt *T⁺_k* = "There is [disease]" and a negative prompt *T⁻_k* = "There is no [disease]" are defined.
-
-Cross-attention fusion produces alignment scores in both directions:
-
-```
-S_i^I2T = MLP_I2T( CrossAttn_I2T(Q=v^g, K=[t^g_i, t^l_i], V=[t^g_i, t^l_i]) )
-S_j^T2I = MLP_T2I( CrossAttn_T2I(Q=t^g, K=[v^g_j, v^l_j], V=[v^g_j, v^l_j]) )
-```
-
-Both directions are trained as multi-class selection (1 correct + 2 distractors per query):
-
-```
-L_MCQ = (L_I2T + L_T2I) / 2
-```
-
-- **I2T MCQ**: given a query image, select the correct disease prompt from 3 candidates (affirmative, negated, or mixed prompts drawn from batch-level labels).
-- **T2I MCQ**: given a query prompt, select the semantically consistent image from 3 candidates.
-
-### 2. Disease-Specific Evidence Formulation
-
-A learnable **Fusion Gater** integrates bidirectional scores per disease:
-
-```
-z⁺_k = w · S^I2T_{k,+} / τ_I2T  +  (1−w) · S^T2I_{k,+} / τ_T2I
-z⁻_k = w · S^I2T_{k,−} / τ_I2T  +  (1−w) · S^T2I_{k,−} / τ_T2I
-```
-
-where `w ∈ [0,1]` is a learnable weight and `τ_I2T`, `τ_T2I` are temperature parameters.
-
-### 3. Beta-based Evidential Deep Learning
-
-Logits are mapped to non-negative evidence and Beta parameters:
-
-```
-e⁺_k = softplus(z⁺_k),   α⁺_k = e⁺_k + 1
-e⁻_k = softplus(z⁻_k),   α⁻_k = e⁻_k + 1
-S_k   = α⁺_k + α⁻_k
-```
-
-**Predictive probability:** `p⁺_k = α⁺_k / S_k`
-
-**Uncertainty (vacuity):** `U_k = 2 / S_k`  *(higher = less evidence = more uncertain)*
-
-**EDL loss:**
-
-```
-L_match = Σ_k [ ψ(S_k) − ψ(α_{k,y}) ]          # maximize evidence for correct hypothesis
-L_KL    = Σ_k KL( Beta(ã⁺_k, ã⁻_k) ‖ Beta(1,1) ) # regularize incorrect evidence toward uniform
-L_EDL   = L_match + λ_KL · L_KL
-```
-
-where `ψ` is the digamma function and `ã` zeroes out the correct-direction evidence before KL regularization.
-
-### 4. Joint Training Schedule
-
-```
-L_total = (1 − λ_e) · L_MCQ  +  λ_e · L_EDL
-```
-
-`λ_e = min(1, epoch / epoch_warmup)` ramps from 0 → 1 over a warmup period.
-This prioritizes vision–language alignment in early training and gradually shifts emphasis to evidential calibration.
-
----
-
 ## Architecture
 
 ![Bi-EDL Framework](Figure.png)
@@ -185,8 +117,6 @@ python train.py \
     --data_path /path/to/NIH \
     --cfg_path  configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_EDL.yaml
 ```
-
-Checkpoints and WandB logs are saved under `logs/<project>/<name>/<timestamp>/`. Best checkpoint (by `val/mean_auroc`) goes to `logs/.../checkpoints/best/best_model.ckpt`.
 
 ### Inference & Uncertainty Evaluation
 
