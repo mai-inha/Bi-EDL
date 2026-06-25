@@ -92,9 +92,6 @@ git clone <repo-url>
 cd Bi-EDL
 
 pip install -r requirements.txt
-
-# Install CARZero backbone
-pip install -e ./CARZero
 ```
 
 ---
