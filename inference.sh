@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CKPT_PATH="checkpoints/best_model.ckpt"
+CKPT_PATH="checkpoints/Bi-EDL_best_model.ckpt"
 CFG_PATH="configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_EDL.yaml"
 DATA_PATH="../data/NIH"
 DEVICE="cuda:0"

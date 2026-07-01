@@ -67,7 +67,7 @@ Stepwise contribution of alignment (Bi-MCQ) and evidential modeling (EDL):
 **Key findings:**
 - CARZero's low Neg AUROC (0.429) confirms that the unaligned backbone cannot reliably distinguish presence from absence.
 - EDL alone (without Bi-MCQ alignment) improves over CARZero but falls well short of Bi-MCQ — semantic alignment is a prerequisite for meaningful evidential uncertainty.
-- Bi-EDL inherits alignment quality from Bi-MCQ while further suppressing overconfident similarities, concentrating misclassified samples into high-uncertainty regions.
+- Bi-EDL inherits alignment quality from Bi-MCQ while further suppressing overconfident similarities, concentragpugting misclassified samples into high-uncertainty regions.
 
 ---
 
@@ -88,10 +88,22 @@ Stepwise contribution of alignment (Bi-MCQ) and evidential modeling (EDL):
 ## Installation
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Castella99/Bi-EDL
 cd Bi-EDL
 
 pip install -r requirements.txt
+```
+
+### Pretrained Weights
+
+Download the Bi-EDL best model checkpoint and place it under `checkpoints/`:
+
+[Download best_model.ckpt (Google Drive)](https://drive.google.com/file/d/1S9RUVR_EsRBLHdRBZAWc3opkol1q4y3j/view?usp=drive_link)
+
+```
+Bi-EDL/
+└── checkpoints/
+    └── best_model.ckpt
 ```
 
 ---
