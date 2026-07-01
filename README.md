@@ -71,6 +71,31 @@ Stepwise contribution of alignment (Bi-MCQ) and evidential modeling (EDL):
 
 ---
 
+## Repository Structure
+
+```
+Bi-EDL/
+├── train.py                    # Bi-EDL Fine-tuning
+├── inference.py                # Inference + uncertainty evaluation
+├── utils.py                    # Metrics (AUROC, PNC, AURC, temperature scaling)
+├── train.sh / inference.sh     # Shell scripts
+├── configs/
+│   └── chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_EDL.yaml
+├── finetune/
+│   ├── finetuning_lightening.py   # MCQEDLLightModel — Bi-MCQ + EDL training logic
+│   ├── finetuning_dm.py           # NIHDataModule
+│   └── finetuning_dataset.py      # Dataset class
+├── pretrain_model/                # Backbone weights (download separately)
+│   ├── VITB-16-M3AE_last.ckpt
+│   └── CARZero_best_model.ckpt
+├── ChestXray-14/
+│   └── test_list.txt              # Official NIH test split
+├── checkpoints/                   # Fine-tuned Bi-EDL checkpoint
+└── logs/                          # Training logs
+```
+
+---
+
 ## Dataset
 
 [NIH ChestXray-14](https://nihcc.app.box.com/v/ChestXray-NIHCC) — 112,120 frontal-view chest X-ray images across 14 thoracic disease categories with severe class imbalance.
@@ -109,9 +134,25 @@ cd Bi-EDL
 pip install -r requirements.txt
 ```
 
-### Trained Bi-EDL Weight
+### Pretrained Backbone Weights
 
-Download the best Bi-EDL checkpoint (fine-tuned on NIH ChestXray-14) and place it under `checkpoints/`:
+Download the following model weights required for fine-tuning and place them under `pretrain_model/`:
+
+| File | Download |
+|---|---|
+| `VITB-16-M3AE_last.ckpt` | [Google Drive](https://drive.google.com/file/d/1QJvtatLuIlYqi-V1DjgHnACM2kq2C-ET/view) |
+| `CARZero_best_model.ckpt` | [Google Drive](https://drive.google.com/file/d/1kYF-k5otW5DHwz1En5d_ScV3zu2E27Ch/view) |
+
+```
+Bi-EDL/
+└── pretrain_model/
+    ├── VITB-16-M3AE_last.ckpt
+    └── CARZero_best_model.ckpt
+```
+
+### Fine-tuned Bi-EDL Weights
+
+Download the best Bi-EDL checkpoint (fine-tuned on NIH ChestXray-14) for inference and place it under `checkpoints/`:
 
 [Download Bi-EDL_best_model.ckpt (Google Drive)](https://drive.google.com/file/d/1S9RUVR_EsRBLHdRBZAWc3opkol1q4y3j/view?usp=drive_link)
 
@@ -208,33 +249,16 @@ Key parameters in `configs/chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_ED
 | Parameter | Default | Description |
 |---|---|---|
 | `train.weight` | `0.5` | Fusion Gater weight $w$ (i2t vs. t2i) |
-| `train.lam` | `50` | Warmup epochs for $\lambda_e$ ramp |
+| `train.lam` | `15` | Warmup epochs for $\lambda_e$ ramp |
 | `train.edl_weight` | `0.1` | $\lambda_{KL}$ — KL regularization weight in $\mathcal{L}_\text{EDL}$ |
 | `train.seed` | `14` | Random seed |
 | `lightning.trainer.lr` | `1e-5` | Adam learning rate |
 | `lightning.trainer.precision` | `16-mixed` | Mixed-precision training |
 | `model.CARZero.multi` | `true` | Separate i2t/t2i fusion modules |
-| `model.text.bert_type` | `Laihaoran/BioClinicalMPBERT` | Text encoder |
 | `freeze.image/text/fusion` | `false` | Modules to freeze during fine-tuning |
 
 ---
 
-## Repository Structure
+## Acknowledgments
 
-```
-Bi-EDL/
-├── train.py                    # Training entry point
-├── inference.py                # Inference + uncertainty evaluation
-├── utils.py                    # Metrics (AUROC, PNC, AURC, temperature scaling)
-├── train.sh / inference.sh     # Shell scripts
-├── configs/
-│   └── chest14_finetuning_llm_dqn_wo_self_atten_mlp_gl_Bi_EDL.yaml
-├── finetune/
-│   ├── finetuning_lightening.py   # MCQEDLLightModel — Bi-MCQ + EDL training logic
-│   ├── finetuning_dm.py           # NIHDataModule
-│   └── finetuning_dataset.py      # Dataset class
-├── ChestXray-14/
-│   └── test_list.txt              # Official NIH test split
-├── checkpoints/                   # Model checkpoints
-└── logs/                          # Training logs
-```
+This work builds upon [CARZero](https://github.com/sqrtsqrtsqrt/CARZero) (Cross-Attention Alignment for Radiology Zero-Shot Classification), proposed by Lai et al. (CVPR 2024). We gratefully acknowledge the authors for releasing their code and pretrained weights, which serve as the backbone of Bi-EDL.
