@@ -83,6 +83,21 @@ Stepwise contribution of alignment (Bi-MCQ) and evidential modeling (EDL):
 
 **Disease categories:** Atelectasis, Cardiomegaly, Effusion, Infiltration, Mass, Nodule, Pneumonia, Pneumothorax, Consolidation, Edema, Emphysema, Fibrosis, Pleural Thickening, Hernia
 
+### Required File Structure
+
+```
+{data_path}/                        # passed via --data_path
+├── Data_Entry_2017.csv             # label file (required for training)
+└── images*/
+    └── images/
+        └── *.png                   # chest X-ray images
+
+ChestXray-14/                       # fixed path at project root
+└── test_list.txt                   # official test split (required for training & inference)
+```
+
+[`test_list.txt`](https://drive.google.com/file/d/17BOdTvImOiHZrcB2K21eeu0CvwIfcsQY/view?usp=drive_link) — Download and place at `ChestXray-14/test_list.txt`.
+
 ---
 
 ## Installation
@@ -94,16 +109,16 @@ cd Bi-EDL
 pip install -r requirements.txt
 ```
 
-### Pretrained Weights
+### Trained Bi-EDL Weight
 
-Download the Bi-EDL best model checkpoint and place it under `checkpoints/`:
+Download the best Bi-EDL checkpoint (fine-tuned on NIH ChestXray-14) and place it under `checkpoints/`:
 
-[Download best_model.ckpt (Google Drive)](https://drive.google.com/file/d/1S9RUVR_EsRBLHdRBZAWc3opkol1q4y3j/view?usp=drive_link)
+[Download Bi-EDL_best_model.ckpt (Google Drive)](https://drive.google.com/file/d/1S9RUVR_EsRBLHdRBZAWc3opkol1q4y3j/view?usp=drive_link)
 
 ```
 Bi-EDL/
 └── checkpoints/
-    └── best_model.ckpt
+    └── Bi-EDL_best_model.ckpt
 ```
 
 ---
